@@ -1,0 +1,89 @@
+def get_gcd(a, b):
+    """Standard Euclidean Algorithm."""
+    while b != 0:
+        a, b = b, a % b
+    return a
+
+def get_prime_factors(n):
+    """Returns unique prime factors of n."""
+    factors = set()
+    d = 2
+    temp_n = n
+    while d * d <= temp_n:
+        if temp_n % d == 0:
+            factors.add(d)
+            while temp_n % d == 0:
+                temp_n //= d
+        d += 1
+    if temp_n > 1:
+        factors.add(temp_n)
+    return list(factors)
+
+def get_phi(n):
+    """Calculates Euler's Totient function phi(n)."""
+    res = n
+    temp_n = n
+    i = 2
+    while i * i <= temp_n:
+        if temp_n % i == 0:
+            res -= res // i
+            while temp_n % i == 0:
+                temp_n //= i
+        i += 1
+    if temp_n > 1:
+        res -= res // temp_n
+    return res
+
+def run_primitive_root(n):
+    print(f"\n--- Finding Primitive Root for n = {n} ---")
+    if n <= 1:
+        return "Enter a number > 1."
+
+    # Step 1: Phi calculation
+    phi = get_phi(n)
+    print(f"Step 1: φ({n}) = {phi}")
+
+    # Step 2: Prime factors of phi
+    factors = get_prime_factors(phi)
+    print(f"Step 2: Prime factors of φ({n}) are {factors}")
+
+    # Step 3: Test candidates g
+    for g in range(2, n):
+        print(f"Checking g = {g}:")
+        if get_gcd(g, n) != 1:
+            print(f"  - gcd({g}, {n}) != 1. Skipping.")
+            continue
+        
+        is_primitive = True
+        for p in factors:
+            exponent = phi // p
+            result = pow(g, exponent, n) # (g^exponent) % n
+            print(f"  - {g}^({phi}/{p}) mod {n} = {result}")
+            if result == 1:
+                print(f"  - {g} is NOT a primitive root.")
+                is_primitive = False
+                break
+        
+        if is_primitive:
+            print(f"SUCCESS: {g} is the smallest primitive root.")
+            return g
+    return "No primitive root found."
+
+def run_euclidean_gcd(a, b):
+    print(f"\n--- Euclidean Algorithm for GCD({a}, {b}) ---")
+    steps = []
+    original_a, original_b = a, b
+    while b != 0:
+        remainder = a % b
+        quotient = a // b
+        print(f"Step: {a} = ({quotient} × {b}) + {remainder}")
+        a, b = b, remainder
+    print(f"RESULT: GCD({original_a}, {original_b}) = {a}")
+    return a
+
+# --- Test the functions ---
+# 1. GCD Example
+run_euclidean_gcd(48, 18)
+
+# 2. Primitive Root Example
+run_primitive_root(7)
