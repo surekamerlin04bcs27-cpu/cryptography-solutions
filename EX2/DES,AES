@@ -1,0 +1,122 @@
+DES
+from flask import Flask, render_template, request app = Flask( name )
+S0 = [
+[1,0,3,2],
+[3,2,1,0],
+[0,2,1,3],
+[3,1,3,2]
+]
+S1 = [
+[0,1,2,3],
+[2,0,1,3],
+[3,0,1,0],
+[2,1,0,3]
+]
+def permute(bits, table):
+return ''.join(bits[i-1] for i in table) def left_shift(bits, n):
+return bits[n:] + bits[:n] def xor(a, b):
+return ''.join(str(int(x)^int(y)) for x,y in zip(a,b)) def bin2(n):
+return format(n, '02b') def sbox(bits, box):
+row = int(bits[0] + bits[3], 2) col = int(bits[1] + bits[2], 2)
+ 
+return bin2(box[row][col]) @app.route('/', methods=['GET', 'POST']) def index():
+output = ""
+if request.method == 'POST':
+pt = request.form['pt'].strip() key = request.form['key'].strip()
+P10 = list(map(int, request.form['p10'].split())) P8 = list(map(int, request.form['p8'].split())) IP = list(map(int, request.form['ip'].split()))
+IP_INV = list(map(int, request.form['ipinv'].split())) EP = list(map(int, request.form['ep'].split())) output += "STEP 1: KEY GENERATION\n"
+p10_key = permute(key, P10) output += f"P10(K) = {p10_key}\n" L, R = p10_key[:5], p10_key[5:] L = left_shift(L, 1)
+R = left_shift(R, 1)
+K1 = permute(L + R, P8)
+output += f"LS-1 → P8 → K1 = {K1}\n\n" output += "STEP 2: INITIAL PERMUTATION\n"
+ip = permute(pt, IP) L0, R0 = ip[:4], ip[4:]
+output += f"IP(PT) = {ip}\n"
+output += f"L0 = {L0}, R0 = {R0}\n\n" output += "STEP 3: FUNCTION F\n"
+ep = permute(R0, EP) output += f"EP(R0) = {ep}\n"
+ 
+x = xor(ep, K1)
+output += f"EP(R0) ⊕ K1 = {x}\n" s0_out = sbox(x[:4], S0)
+s1_out = sbox(x[4:], S1)
+output += f"S0 Output = {s0_out}\n" output += f"S1 Output = {s1_out}\n"
+F = s0_out + s1_out output += f"F = {F}\n\n"
+output += "STEP 4: XOR WITH L0\n" R1 = xor(L0, F)
+L1 = R0
+output += f"L1 = {L1}, R1 = {R1}\n\n" output += "STEP 5: IP INVERSE\n"
+cipher = permute(L1 + R1, IP_INV) output += f"Cipher Text = {cipher}"
+return render_template('DES.html', output=output) if  name	== ' main ':
+app.run(debug=True) OUTPUT:
+S-DES Tool 8-bit Plaintext 10-bit Key Rounds
+IP Table IP-1 Table
+EP (Expansion Permutation) P10 Table
+ 
+P8 Table Encrypt Now
+Ciphertext: 01110101Intermediate Steps:
+P10 applied: 1000001100 After LS-1 → L: 00001 R: 11000 K1: 10100100
+After LS-2 → L: 00100 R: 00011 K2: 01000011
+After IP: 01111110
+After Round 1: 11001110
+After Switch: 11101100
+After Round 2: 11101100
+After IP⁻¹ (Ciphertext): 01110101.
+
+AES
+from flask import Flask, render_template, request from
+import AES import binascii
+app = Flask( name  )
+@app.route('/', methods=['GET', 'POST']) def index():
+output = ""
+if request.method == 'POST':
+pt = request.form['pt'].encode('utf-8') key_text = request.form['key']
+# AES-128 requires exactly 16 bytes for the key if len(key_text) != 16:
+output = "Error: Key must be exactly 16 characters long."
+ 
+else:
+key = key_text.encode('utf-8')
+# Initialize AES cipher in EAX mode cipher = AES.new(key, AES.MODE_EAX)
+# Encrypt the plaintext and generate a MAC tag for integrity ciphertext, tag = cipher.encrypt_and_digest(pt)
+# Formatting results for display output += "STEP 1: INITIALIZATION\n"
+output += f"Key Used: {key_text}\n"
+output += f"Nonce (Hex): {binascii.hexlify(cipher.nonce).decode()}\n\n" output += "STEP 2: ENCRYPTION\n"
+output += f"Ciphertext (Hex): {binascii.hexlify(ciphertext).decode()}\n" output += f"Auth Tag (Hex): {binascii.hexlify(tag).decode()}\n\n" output += "Note: Keep the Nonce and Tag for decryption."
+return render_template('AES.html', output=output) if  name	== ' main ':
+app.run(debug=True) OUTPUT:
+Initial Plaintext: 54 4F 4E 20
+77 6E 69 54
+6F 65 6E 77
+20 20 65 6F
+Initial Key: 2B 28 AB 09
+7E AE F7 CF
+15 D2 15 4F
+16 A6 88 3C
+ 
+After AddRoundKey: 7F 67 E5 29
+09 C0 9E 9B
+7A B7 7B 38
+36 86 ED 53
+===== ROUND 1 =====
+After SubBytes:
+D2 85 D9 A5 01 BA 0B 14
+DA A9 21 07
+05 44 55 ED
+After ShiftRows:
+D2 85 D9 A5 BA 0B 14 01
+21 07 DA A9
+ED 05 44 55
+After AddRoundKey: F9 AD 72 AC
+C4 A5 E3 CE 34 D5 CF E6 FB A3 CC 69
+
+===== ROUND 2 =====
+After SubBytes: 99 95 40 91
+1C 06 11 8B
+18 03 8A 8E
+0F 0A 4B F9
+ 
+After ShiftRows:
+99 95 40 91
+06 11 8B 1C
+8A 8E 18 03 F9 0F 0A 4B
+After AddRoundKey:
+B2 BD EB 98 78 BF 7C D3
+9F 5C 0D 4C EF A9 82 77
+Final Ciphertext:
+B2 BD EB 98 78 BF 7C D3 9F 5C 0D 4C EF A9 82 77
