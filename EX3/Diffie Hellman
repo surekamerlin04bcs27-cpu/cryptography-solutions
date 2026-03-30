@@ -1,1 +1,56 @@
+def is_prime(n):
+ if n < 2: return False
+ if n == 2: return True
+ if n % 2 == 0: return False
+ for i in range(3, int(n**0.5) + 1, 2):
+ if n % i == 0: return False
+ return True
+def manual_mod_pow(base, exp, mod):
+ """Computes (base^exp) % mod without using built-in pow()"""
+ result = 1
+ base = base % mod
+ while exp > 0:
+ # If exponent is odd, multiply base with result
+ if exp % 2 == 1:
+ result = (result * base) % mod
+ # Square the base and divide exponent by 2
+ base = (base * base) % mod
+ exp //= 2
+ return result
+def run_diffie_hellman(p, g, a, b):
+ # 1. Validation
+ if not is_prime(p):
+ return "Error: p must be prime."
+ if not (1 < g < p):
+ return "Error: g must be between 1 and p."
+ print(f"--- Public Parameters ---")
+ print(f"Prime (p): {p}")
+ print(f"Generator (g): {g}\n")
+ # 2. Public Key Computation
+ # Alice: A = g^a mod p
+ A = manual_mod_pow(g, a, p)
+ # Bob: B = g^b mod p
+ B = manual_mod_pow(g, b, p)
+ print(f"--- Public Key Exchange ---")
+ print(f"Alice's Public Key (A): {A}")
+ print(f"Bob's Public Key (B): {B}\n")
+ # 3. Shared Secret Computation
+ # Alice computes: s = B^a mod p
+ s_alice = manual_mod_pow(B, a, p)
+ # Bob computes: s = A^b mod p
+ s_bob = manual_mod_pow(A, b, p)
+ print(f"--- Shared Secret ---")
+ print(f"Alice computes: {s_alice}")
+ print(f"Bob computes: {s_bob}")
+ if s_alice == s_bob:
+ return f"\nSuccess! Shared Secret Key: {s_alice}"
+ else:
+ return "\nFailure: Keys do not match."
+# Example usage (matching your HTML defaults)
+p_val = 23
+g_val = 5
+alice_private = 6
+bob_private = 15
+result = run_diffie_hellman(p_val, g_val, alice_private, bob_private)
+print(result)
 
