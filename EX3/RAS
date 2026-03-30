@@ -1,1 +1,44 @@
-
+import math
+def get_mod_inverse(e, phi):
+ def extended_gcd(a, b):
+ if a == 0:
+ return b, 0, 1
+ else:
+ g, y, x = extended_gcd(b % a, a)
+ return g, x - (b // a) * y, y
+ g, x, y = extended_gcd(e, phi)
+ if g != 1:
+ raise Exception('Modular inverse does not exist')
+ else:
+ return x % phi
+def run_rsa(p, q, message):
+ # Step 1: Compute n and phi
+ n = p * q
+ phi = (p - 1) * (q - 1)
+ # Step 2: Choose public exponent e (1 < e < phi and gcd(e, phi) == 1)
+ e = 3
+ while math.gcd(e, phi) != 1:
+ e += 2
+ # Step 3: Compute private exponent d
+ d = get_mod_inverse(e, phi)
+ # Step 4: Encryption (C = M^e mod n)
+ ciphertext = pow(message, e, n)
+ # Step 5: Decryption (M = C^d mod n)
+ decrypted_msg = pow(ciphertext, d, n)
+ return {
+ "n": n,
+ "phi": phi,
+ "public_key": (e, n),
+ "private_key": (d, n),
+ "ciphertext": ciphertext,
+ "decrypted_message": decrypted_msg
+ }
+# Example Usage (matching the HTML defaults)
+p_val = 61
+q_val = 53
+msg_val = 65
+results = run_rsa(p_val, q_val, msg_val)
+print(f"Public Key: {results['public_key']}")
+print(f"Private Key: {results['private_key']}")
+print(f"Ciphertext: {results['ciphertext']}")
+print(f"Decrypted: {results['decrypted_message']}")
