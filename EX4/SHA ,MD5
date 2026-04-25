@@ -1,0 +1,146 @@
+1.SHA
+import struct
+import math
+MASK = 0xFFFFFFFF
+def rotr(x, n):
+return ((x >> n) | (x << (32 - n))) & MASK
+def hex8(x):
+return format(x & MASK, '08x')
+# Generate K constants (instead of hardcoding)
+def generate_K():
+return [int((abs(math.sin(i + 1)) * (2**32))) & MASK for i in range(64)]
+# Generate initial hash values (from square roots of primes)
+def generate_H():
+primes = [2,3,5,7,11,13,17,19]
+return [int((math.sqrt(p) % 1) * (2**32)) & MASK for p in primes]
+def sha256_simple(msg):
+steps = []
+log = lambda x: steps.append(x)
+K = generate_K()
+h = generate_H()
+data = bytearray(msg.encode())
+bit_len = len(data) * 8
+# Padding
+data.append(0x80)
+while len(data) % 64 != 56:
+data.append(0)
+data += struct.pack(">Q", bit_len)
+log("PADDING DONE")
+# Process block
+for chunk in range(0, len(data), 64):
+w = [0]*64
+for i in range(16):
+w[i] = struct.unpack(">I", data[chunk+i*4:chunk+i*4+4])[0]
+for i in range(16, 64):
+s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15] >> 3)
+s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2] >> 10)
+w[i] = (w[i-16] + s0 + w[i-7] + s1) & MASK
+a,b,c,d,e,f,g,hh = h
+log("PROCESSING 64 ROUNDS")
+for i in range(64):
+S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25)
+ch = (e & f) ^ (~e & g)
+temp1 = (hh + S1 + ch + K[i] + w[i]) & MASK
+S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22)
+maj = (a & b) ^ (a & c) ^ (b & c)
+temp2 = (S0 + maj) & MASK
+hh,g,f,e,d,c,b,a = g,f,e,(d + temp1)&MASK,c,b,a,(temp1 + temp2)&MASK
+if i % 16 == 0: # log only important rounds
+log(f"Round {i}: {hex8(a)} {hex8(b)} {hex8(c)} {hex8(d)}")
+# Add back
+h = [(x+y)&MASK for x,y in zip(h,[a,b,c,d,e,f,g,hh])]
+log("BLOCK DONE")
+final_hash = ''.join(hex8(x) for x in h)
+log("FINAL HASH: " + final_hash)
+return final_hash, steps
+# RUN
+if __name__ == "__main__":
+text = input("Enter text: ")
+h, steps = sha256_simple(text)
+print("\n--- STEPS ---")
+for s in steps:
+print(s)
+print("\nSHA-256:", h)
+
+MD5
+import struct
+import math
+# Left rotate function
+def left_rotate(x, c):
+return ((x << c) | (x >> (32 - c))) & 0xFFFFFFFF
+# MD5 functions
+def F(x, y, z): return (x & y) | (~x & z)
+def G(x, y, z): return (x & z) | (y & ~z)
+def H(x, y, z): return x ^ y ^ z
+def I(x, y, z): return y ^ (x | ~z)
+# Constants
+s = [
+7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22,
+5,9,14,20, 5,9,14,20, 5,9,14,20, 5,9,14,20,
+4,11,16,23, 4,11,16,23, 4,11,16,23, 4,11,16,23,
+6,10,15,21, 6,10,15,21, 6,10,15,21, 6,10,15,21
+]
+K = [int(abs(math.sin(i + 1)) * (2**32)) & 0xFFFFFFFF for i in range(64)]
+def md5(message):
+steps = []
+# Step 1: Convert to bytes
+msg = bytearray(message, 'utf-8')
+orig_len_bits = (8 * len(msg)) & 0xffffffffffffffff
+steps.append(f"Step 1: Input = '{message}', Length = {len(msg)} bytes")
+# Step 2: Padding
+msg.append(0x80)
+while (len(msg) * 8) % 512 != 448:
+msg.append(0)
+msg += struct.pack('<Q', orig_len_bits)
+steps.append(f"Step 2: After padding length = {len(msg)} bytes"
+# Step 3: Initialize variables
+A = 0x67452301
+B = 0xefcdab89
+C = 0x98badcfe
+D = 0x10325476
+steps.append(f"Step 3: Initial Values:\nA={hex(A)}, B={hex(B)}, C={hex(C)}, D={hex(D)}")
+# Step 4: Process 512-bit chunks
+for chunk_offset in range(0, len(msg), 64):
+chunk = msg[chunk_offset:chunk_offset+64]
+M = list(struct.unpack('<16I', chunk))
+a, b, c, d = A, B, C, D
+steps.append(f"\nProcessing Chunk {chunk_offset//64}")
+for i in range(64):
+if 0 <= i <= 15:
+f = F(b, c, d)
+g = i
+elif 16 <= i <= 31:
+f = G(b, c, d)
+g = (5*i + 1) % 16
+elif 32 <= i <= 47:
+f = H(b, c, d)
+g = (3*i + 5) % 16
+else:
+f = I(b, c, d)
+g = (7*i) % 16
+temp = d
+d = c
+c = b
+b = (b + left_rotate((a + f + K[i] + M[g]) & 0xFFFFFFFF, s[i])) & 0xFFFFFFFF
+a = temp
+# Log few steps (not all 64 to keep readable)
+if i % 16 == 0:
+steps.append(f"Round {i//16 + 1} step {i}: A={hex(a)}, B={hex(b)}, C={hex(c)}, D={hex(d)}")
+# Add to result
+A = (A + a) & 0xFFFFFFFF
+B = (B + b) & 0xFFFFFFFF
+C = (C + c) & 0xFFFFFFFF
+D = (D + d) & 0xFFFFFFFF
+steps.append(f"After Chunk: A={hex(A)}, B={hex(B)}, C={hex(C)}, D={hex(D)}")
+# Step 5: Output
+result = ''.join(f'{x:02x}' for x in struct.pack('<4I', A, B, C, D))
+steps.append(f"\nFinal MD5 Hash: {result}")
+return result, step
+# ---- Run Program ----
+if __name__ == "__main__":
+text = input("Enter text: ")
+hash_value, steps = md5(text)
+print("\n--- INTERMEDIATE STEPS ---")
+for step in steps:
+print(step)
+print("\nFinal MD5 Hash:", hash_value)
